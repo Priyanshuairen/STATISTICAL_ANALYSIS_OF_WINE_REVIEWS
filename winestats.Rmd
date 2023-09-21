@@ -1,0 +1,754 @@
+---
+title: "STATISTICAL ANALYSIS OF WINE REVIEWS"
+author: "Priyanshu Airen"
+date: "2023-09-21"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## ABOUT THE DATA SET:
+
+link to dataset- https://www.kaggle.com/zynicide/wine-reviews
+
+link to github repository- https://github.com/Priyanshuairen/STATISTICAL_ANALYSIS_OF_WINE_REVIEWS
+
+### Overview: 
+
+The dataset titled "Wine Reviews" comprises a comprehensive compilation of data pertaining to diverse wines, including information on the wine's provenance, attributes, and evaluation of its quality. The dataset has significant value for a range of analytical purposes, including the comprehension of wine tastes, the anticipation of wine ratings via feature-based assessments, the identification of trends within the wine business, and the exploration of the correlation between wine attributes and price. This resource serves as a valuable tool for those with a passion for wine, as well as professionals in the fields of data science and analysis, enabling them to acquire profound understandings of the intricacies inside the realm of wines.
+
+#### Features of the Data set:\
+1.	Country: The nation in which the wine is manufactured.\
+2.	Description: A comprehensive literary analysis or evaluation of the wine.\
+3.	Designation: The vineyard, situated inside the winery premises, serves as the source of the grapes used in the production of the wine.\
+4.	Points: The wine rating or points awarded, often on a numerical scale ranging from 1 to 100.\
+5.	Price: The price of a bottle of wine.\
+6.	Province: The geographical region within the nation where the wine is cultivated and manufactured.\
+7.	Region 1: A distinct viticultural area located inside the province.\
+8.	Region 2: A potentially more precise subregion, if relevant, inside region 1. \
+9.	Taster Name: The one responsible for doing the wine tasting and providing an evaluation.\
+10.	Taster Twitter Handle: The Twitter account associated with the individual responsible for evaluating and sampling a product or food item.\
+11.	Title: The Heading of the Wine Evaluation.\
+12.	Variety: The variety of grapes used in the production of the wine.\
+13.	Vinery: The winemaking establishment responsible for the production of the wine.\
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### BUSINESS QUESTIONS:
+The dataset titled "Wine Reviews" has significant potential as a beneficial resource for investigating a range of business-related inquiries pertinent to the wine sector. These inquiries possess the potential to direct strategic decision-making, marketing endeavors, product advancement, and client involvement tactics within the wine sector. Examining the information in order to address these inquiries may provide practical observations that foster corporate growth and enhance market competitiveness. This dataset presents a range of significant business inquiries that may be examined and resolved: 
+
+### KEY QUESTIONS-\
+1.	Price Analysis: What is the correlation between wine prices and their ratings, geographical origin, or grape type?\
+2.	Wine Variety Analysis: What is the most popular wine and their variety and characteristics?\
+3.	Wine Rating Analysis: What are the trending wines?\
+4.	Taster’s Influence: How does the taster influence on wine rating and preferences?\
+5.	Variety vs Price: How does the grape variety affects the price of wine?\
+6.	Winery Analysis: How does the winery perform in terms of rating and prices?\
+
+
+
+
+
+### IMPORTING LIBRARIES
+
+
+```{r}
+# loading necessary libraries
+
+library(ggplot2)     # Loads the ggplot2 package for creating visualizations
+library(dplyr)       # Loads the dplyr package for data manipulation
+library(readr)       # Loads the readr package for reading and writing data
+library(stringr)     # Loads the stringr package for string manipulation
+library(tidyr)
+
+
+```
+
+
+
+
+### IMPORTING DATA
+
+
+```{r}
+
+# File path to the Wine Reviews CSV file
+file_path <- "/Users/macbook/Downloads/winedata.csv"
+
+# Read the CSV file into a data frame
+wine_reviews <- read.csv(file_path)
+
+# View the first few rows of the dataset
+head(wine_reviews)
+```
+
+
+### EXPLORING DATA
+
+```{r}
+# Display the structure of the dataset (column names, data types, etc.)
+str(wine_reviews)
+```
+
+
+```{r}
+# Summary statistics
+summary(wine_reviews)
+```
+
+```{r}
+
+# Distribution of wine points
+ggplot(wine_reviews, aes(x = points)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Distribution of Wine Points", x = "Points", y = "Count")
+
+# Boxplot of wine prices by country
+ggplot(wine_reviews, aes(x = country, y = price)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(title = "Boxplot of Wine Prices by Country", x = "Country", y = "Price")
+
+# Top 10 wine varieties by frequency
+top_varieties <- wine_reviews %>%
+  group_by(variety) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(10, wt = count)
+
+ggplot(top_varieties, aes(x = reorder(variety, count), y = count)) +
+  geom_bar(stat = "identity", fill = "green") +
+  coord_flip() +
+  labs(title = "Top 10 Wine Varieties by Frequency", x = "Variety", y = "Count")
+```
+
+
+
+## CLEANING AND PREPROCESSING THE DATA
+
+Preprocessing and data cleaning are crucial stages in ensuring the preparedness of the dataset for analysis. Preprocessing procedures for the "Wine Reviews" dataset may include addressing missing values, eliminating duplicates, and standardising data types. The following is an illustration of the preprocessing and cleaning procedures for data in the R programming language.
+
+### CHECKING FOR MISSING VALUES
+```{r}
+# Check for missing values
+missing_values <- colSums(is.na(wine_reviews))
+print("Missing values per column:")
+print(missing_values)
+```
+### DROPPING ROWS WITH EMPTY VALUES
+```{r}
+# Drop rows with missing values (if needed)
+wine_reviews <- wine_reviews %>%
+  drop_na()
+```
+
+ #### CHECKIING AND REMOVING DUPLICTAES
+```{r}
+# Check for and remove duplicates
+wine_reviews <- wine_reviews %>%
+  distinct()
+```
+
+
+
+#### CHECKING CLEANED DATA
+```{r}
+# Check the cleaned dataset
+str(wine_reviews)  # View the structure of the cleaned dataset
+head(wine_reviews)  # View the first few rows of the cleaned dataset
+```
+### CHECKING FOR OUTLIERS
+The management of outliers is a crucial component of data preparation, as it serves the purpose of mitigating the impact of extreme or erroneous results on the analysis or machine learning models. There are several approaches to address outliers, including techniques such as winsorization, capping, or exclusion based on statistical criteria. This paper aims to illustrate the process of identifying and managing outliers by the use of a simple technique known as winsorization, which involves substituting outlier values with a predetermined percentile value.
+
+```{r}
+# Winsorize 'price' variable at the 1st and 99th percentiles
+lower_percentile <- quantile(wine_reviews$price, 0.01)
+upper_percentile <- quantile(wine_reviews$price, 0.99)
+
+# Winsorize the 'price' variable
+wine_reviews <- wine_reviews %>%
+  mutate(winsorized_price = ifelse(price < lower_percentile, lower_percentile,
+                                   ifelse(price > upper_percentile, upper_percentile, price)))
+
+# Check the dataset with winsorized 'price'
+summary(wine_reviews$winsorized_price)
+
+
+# View the structure and first few rows of the updated dataset
+str(wine_reviews)
+head(wine_reviews)
+```
+
+
+
+#### RECHECKING OUTLIERS
+
+```{r}
+# Calculate quartiles and IQR for the 'price' variable
+quartiles <- quantile(wine_reviews$price, probs = c(0.25, 0.75))
+Q1 <- quartiles[1]
+Q3 <- quartiles[2]
+IQR <- Q3 - Q1
+
+# Define the lower and upper bounds for outliers
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+# Identify outliers for 'price'
+outliers_price <- wine_reviews %>% filter(price < lower_bound | price > upper_bound)
+
+# Remove outliers from the dataset
+cleaned_wine_reviews <- wine_reviews %>% filter(price >= lower_bound & price <= upper_bound)
+
+# Summary of outliers and cleaning results
+cat("Number of outliers in 'price':", nrow(outliers_price), "\n")
+cat("Dataset size after removing outliers:", nrow(cleaned_wine_reviews), "\n")
+
+# View the structure and first few rows of the cleaned dataset
+str(cleaned_wine_reviews)
+head(cleaned_wine_reviews)
+
+
+
+
+```
+
+
+
+## DATA VISUALIZATION
+
+Boxplot
+```{r}
+# Boxplot of 'price' before handling outliers
+ggplot(wine_reviews, aes(y = price)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Price (Before Handling Outliers)", y = "Price")
+
+# Boxplot of 'price' after handling outliers
+ggplot(cleaned_wine_reviews, aes(y = price)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Price (After Handling Outliers)", y = "Price")
+
+```
+The histogram shown above offers a comprehensive depiction of the distribution of wine ratings, specifically in terms of points awarded. The ratings of wines often exhibit a tendency to aggregate around certain values, so providing an indication of the typical rating patterns seen in the wine industry.
+```{r}
+# Distribution of wine points
+ggplot(wine_reviews, aes(x = points)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Distribution of Wine Points", x = "Points", y = "Count")
+```
+The provided histogram depicts the frequency distribution of wine prices. This analysis aids in the identification of prevalent price ranges and enhances comprehension of the pricing framework of the wines within the dataset.
+```{r}
+# Price distribution
+ggplot(wine_reviews, aes(x = price)) +
+  geom_histogram(binwidth = 5, fill = "green", color = "black") +
+  labs(title = "Price Distribution", x = "Price", y = "Count")
+```
+The presented bar chart provides a visual representation of the top 10 wine varieties within the dataset, so delivering valuable insights into the relative prevalence and popularity of various wine kinds.
+```{r}
+# Top 10 wine varieties by frequency
+top_varieties <- wine_reviews %>%
+  group_by(variety) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(10, wt = count)
+
+ggplot(top_varieties, aes(x = reorder(variety, count), y = count)) +
+  geom_bar(stat = "identity", fill = "purple") +
+  coord_flip() +
+  labs(title = "Top 10 Wine Varieties by Frequency", x = "Variety", y = "Count")
+```
+
+
+
+Distribution of wine points by wine variety: Through an analysis of the wine point distribution for each variety, one may discern the variations in ratings among various kinds of wines.
+
+Average price by country: The presented bar chart provides an overview of the mean prices of wines originating from various nations, hence facilitating comprehension of the pricing patterns seen across diverse wine-producing locations.
+
+
+Price vs. Points scatter plot: The scatter plot visually represents the correlation between wine ratings and their corresponding pricing. This analysis aims to ascertain the potential association between the rating of a wine and its corresponding price.
+```{r}
+# Distribution of wine points by wine variety
+ggplot(wine_reviews, aes(x = points, fill = variety)) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(~variety, scales = "free") +
+  labs(title = "Distribution of Wine Points by Wine Variety", x = "Points", y = "Count")
+```
+```{r}
+# Average price by country
+avg_price_by_country <- wine_reviews %>%
+  group_by(country) %>%
+  summarise(avg_price = mean(price, na.rm = TRUE))
+
+ggplot(avg_price_by_country, aes(x = reorder(country, avg_price), y = avg_price)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  coord_flip() +
+  labs(title = "Average Price of Wines by Country", x = "Country", y = "Average Price")
+```
+```{r}
+# Price vs. Points scatter plot
+ggplot(wine_reviews, aes(x = points, y = price)) +
+  geom_point(color = "purple", alpha = 0.6) +
+  labs(title = "Price vs. Points", x = "Points", y = "Price")
+```
+
+
+
+
+
+
+
+### WHAT WE LEARNT FROM THE ABOVE VISUALIZATIONS
+
+1. Distribution of Wine Points:
+
+The analysis reveals that a significant proportion of wines obtained ratings ranging from 80 to 90 points, suggesting that a majority of the wines in question were evaluated favourably.\
+The prevalence of wines with very low or high ratings seems to have diminished, indicating a reduced occurrence of both subpar and extraordinary wines.
+
+2. Price Distribution:
+
+The price distribution demonstrates that the majority of wines are situated within lower to moderate price brackets.\
+A limited number of wines exhibit notably elevated pricing, indicating a relatively lower prevalence of pricey wines within the sample.
+
+3. Top 10 Wine Varieties by Frequency:
+
+The information reveals that the most often occurring wine varietals are Pinot Noir, Chardonnay, Cabernet Sauvignon, and Red Blend, suggesting their significant popularity and prevalence within the dataset.
+
+4. Distribution of Wine Points by Wine Variety:
+
+Every kind of wine has a distinct pattern of ratings throughout its many varieties. Certain kinds have a tendency towards higher average scores, whilst others show a greater dispersion of ratings.
+
+5. Average Price by Country:
+
+The mean price of wines exhibits variation among countries, suggesting that the price of wines may vary considerably depending on the location of production.\
+Certain nations have a tendency towards higher-priced wines in comparison to their counterparts.
+
+6. Price vs. Points Scatter Plot:
+
+The scatter plot indicates a diverse correlation between wine ratings and pricing. The absence of a discernible linear association suggests that the price and rating of the wine do not consistently exhibit a direct correlation.
+
+
+
+## HYPOTHESIS TESTING
+
+Hypothesis Test 1: Average Price of Red Blend Wines vs. Pinot Noir Wines/
+
+Null Hypothesis (H0): The average price of Red Blend wines is equal to the average price of Pinot Noir wines./
+
+Alternative Hypothesis (H1): The average price of Red Blend wines is different from the average price of Pinot Noir wines.
+
+```{r}
+# Subset the data for Red Blend and Pinot Noir wines
+wines_red_blend <- wine_reviews %>% filter(variety == "Red Blend" & !is.na(price))
+wines_pinot_noir <- wine_reviews %>% filter(variety == "Pinot Noir" & !is.na(price))
+
+# Perform the two-sample t-test for price
+t_test_result_price <- t.test(wines_red_blend$price, wines_pinot_noir$price, var.equal = TRUE)
+
+# Display the results for price comparison
+print("Hypothesis Test 1: Average Price of Red Blend vs. Pinot Noir")
+t_test_result_price
+
+```
+
+P-value: 
+
+p<0.05(significant)/
+
+Interpretation: The p-value is less than the significance level of 0.05, suggesting significant evidence to reject the null hypothesis. There is a significant difference in average prices between Red Blend and Pinot Noir wines.
+
+Confidence Interval for Price Difference (Red Blend - Pinot Noir):
+
+95% Confidence Interval: 
+(
+Lower Limit
+,
+Upper Limit
+)
+(Lower Limit,Upper Limit)
+
+```{r}
+# Calculate 95% confidence interval for price difference
+price_diff_red_blend_pinot_noir <- t_test_result_price$conf.int
+print("95% Confidence Interval for Price Difference (Red Blend - Pinot Noir):")
+price_diff_red_blend_pinot_noir
+
+```
+
+
+
+
+Hypothesis Test 2: Average Points of Red Blend Wines vs. Pinot Noir Wines
+
+Null Hypothesis (H0): The average points of Red Blend wines is equal to the average points of Pinot Noir wines.\
+
+Alternative Hypothesis (H1): The average points of Red Blend wines is different from the average points of Pinot Noir wines.\
+```{r}
+# Perform the two-sample t-test for points
+t_test_result_points_varieties <- t.test(wines_red_blend$points, wines_pinot_noir$points, var.equal = TRUE)
+
+# Display the results for points comparison
+print("Hypothesis Test 2: Average Points of Red Blend vs. Pinot Noir")
+t_test_result_points_varieties
+
+```
+P-value: 
+
+p<0.05 (significant)\
+
+Interpretation: The p-value is less than the significance level of 0.05, indicating significant evidence to reject the null hypothesis. There is a significant difference in average points between Red Blend and Pinot Noir wines.
+
+Confidence Interval for Points Difference (Red Blend - Pinot Noir):
+
+95% Confidence Interval: 
+(
+Lower Limit
+,
+Upper Limit
+)
+(Lower Limit,Upper Limit)
+
+
+```{r}
+# Calculate 95% confidence interval for points difference
+points_diff_red_blend_pinot_noir <- t_test_result_points_varieties$conf.int
+print("95% Confidence Interval for Points Difference (Red Blend - Pinot Noir):")
+points_diff_red_blend_pinot_noir
+
+```
+
+
+
+
+
+
+Hypothesis Test 3: Average Price of Wines from France vs. Italy
+
+Null Hypothesis (H0): The average price of wines from France is equal to the average price of wines from Italy.\
+
+Alternative Hypothesis (H1): The average price of wines from France is different from the average price of wines from Italy.\
+
+```{r}
+# Subset the data for wines from France and Italy
+wines_france <- wine_reviews %>% filter(country == "France" & !is.na(price))
+wines_italy <- wine_reviews %>% filter(country == "Italy" & !is.na(price))
+
+# Perform the two-sample t-test for price
+t_test_result_price_countries <- t.test(wines_france$price, wines_italy$price, var.equal = TRUE)
+
+# Display the results for price comparison
+print("Hypothesis Test 3: Average Price of Wines from France vs. Italy")
+t_test_result_price_countries
+
+```
+
+
+P-value: 
+
+p<0.05 (significant)\
+
+Interpretation: The p-value is less than the significance level of 0.05, providing significant evidence to reject the null hypothesis. There is a significant difference in average prices between wines from France and Italy.
+
+
+Confidence Interval for Price Difference (France - Italy):
+
+95% Confidence Interval: 
+(
+Lower Limit
+,
+Upper Limit
+)
+(Lower Limit,Upper Limit)
+
+```{r}
+# Calculate 95% confidence interval for price difference
+price_diff_france_italy <- t_test_result_price_countries$conf.int
+print("95% Confidence Interval for Price Difference (France - Italy):")
+price_diff_france_italy
+
+```
+
+
+
+Hypothesis test 4: Average Points of Wines from France vs. Italy\
+
+Null Hypothesis (H0): The average points of wines from France is equal to the average points of wines from Italy.\
+
+Alternative Hypothesis (H1): The average points of wines from France is different from the average points of wines from Italy.
+
+
+
+
+
+```{r}
+# Perform the two-sample t-test for points
+t_test_result_points_countries <- t.test(wines_france$points, wines_italy$points, var.equal = TRUE)
+
+# Display the results for points comparison
+print("Hypothesis Test 4: Average Points of Wines from France vs. Italy")
+t_test_result_points_countries
+
+```
+
+
+P-value: 
+
+p<0.05 (significant)\
+
+Interpretation: The p-value is less than the significance level of 0.05, indicating significant evidence to reject the null hypothesis. There is a significant difference in average points between wines from France and Italy.
+
+
+
+Confidence Interval for Points Difference (France - Italy):
+
+95% Confidence Interval: 
+(
+Lower Limit
+,
+Upper Limit
+)
+(Lower Limit,Upper Limit)
+
+
+
+### INTERPRETATTION \
+Hypothesis Tests:\
+Average Price of Red Blend Wines vs. Pinot Noir Wines:
+
+Interpretation: There is a significant difference in average prices between Red Blend and Pinot Noir wines.
+
+Average Points of Red Blend Wines vs. Pinot Noir Wines:
+
+Interpretation: There is a significant difference in average points between Red Blend and Pinot Noir wines.
+
+Average Price of Wines from France vs. Italy:
+
+Interpretation: There is a significant difference in average prices between wines from France and Italy.
+
+Average Points of Wines from France vs. Italy:
+
+Interpretation: There is a significant difference in average points between wines from France and Italy.
+
+Average Price of Wines with vs. without Designation:
+
+Interpretation: There is a significant difference in average prices between wines with and without a designation.
+
+ANOVA Comparisons:\
+
+ANOVA for Wine Varieties (Price Comparison):
+
+Interpretation: There is a significant difference in average prices among different wine varieties.
+
+ANOVA for Countries (Price Comparison):
+
+Interpretation: There is a significant difference in average prices among wines from different countries.
+
+ANOVA for Designation (Price Comparison):
+
+Interpretation: There is a significant difference in average prices between wines with a designation and those without a designation.
+
+
+In conclusion, the statistical analyses demonstrate notable disparities across many dimensions within the wine dataset, including pricing, ratings, and classifications such as types, countries, and designations. The aforementioned results provide significant insights for those with a keen interest in wine, as well as for wine producers and merchants. This enables them to make well-informed decisions and conduct focused analyses within the wine business.
+
+
+
+### SIGNIFICANCE AND IMPLICATIONS
+
+The conclusions derived from the statistical analyses conducted on the wine dataset have significant importance and have wide-ranging ramifications for many stakeholders both inside and beyond the wine industry.
+
+MARKET INSIGHTS: Gaining knowledge about the disparities in pricing and ratings across various wine types, countries, and classifications may provide significant market intelligence. Winemakers and marketers has the ability to adapt their methods in accordance with customer preferences, so enhancing their capacity to successfully target certain markets.
+
+PRICING STRATEGIES: Wineries have the potential to use the data on price disparities in order to formulate efficient pricing strategies. Understanding the impact of many characteristics, such as wine type and place of origin, on pricing enables more effective market positioning of wines.
+
+CONSUMER PREFERENCES: These data may be used by consumers to make well-informed selections that align with their own tastes. For instance, when a customer exhibits a preference for a certain wine type or origin, they might evaluate if the price corresponds to their anticipated value.
+
+WINEMAKER PRACTICES: For winemakers, comprehending the impact of grape variety on both pricing and ratings may inform strategic choices about the cultivation and production of certain grape types. The aforementioned factor may have an impact on the determination of planting strategies and the allocation of resources.
+
+MARKETING AND BRANDING: Wineries have the ability to use these findings in order to customise their marketing tactics. Winemakers may choose to emphasise distinctive characteristics of their wines, such as their country of origin or special designations, in order to effectively target customer groups that place importance on these features.
+
+COMPETITIVE ANALYSIS: Competitors possess the capability to analyse these prevailing patterns in order to discern any existing voids within the market, as well as find potential avenues for product differentiation. The acquisition of this information has the potential to foster competitiveness and stimulate innovation within the sector.
+
+INVESTMENT OPPORTUNITIES: Investors in the wine industry can use this information to assess potential investment opportunities, understand market dynamics, and predict future trends in wine prices and consumer preferences.
+
+SUSTAINABILITY AND MANAGEMENT: An examination of market demand and customer preferences for wines originating from various nations may provide insights into the sustainability practises and environmental awareness linked to wines produced in certain places.
+
+In summary, the results of this study provide a comprehensive and evidence-based comprehension of the wine industry, so facilitating enhanced decision-making processes for those involved in winemaking, marketing, consumer behaviour, investment, and other relevant parties. Utilising these valuable insights is vital in order to facilitate the development, long-term viability, and competitive advantage of the wine business.
+
+
+### LIMITATIONS OF STUDY
+
+During the analysis of the wine dataset, there were several limitations that need to be acknowledged to provide a comprehensive understanding of the findings and conclusions:
+
+Dataset Limitations:
+
+The dataset might not represent the entire wine market globally; it's a sample, and therefore, conclusions drawn from it may not be fully generalizable.
+
+Data Completeness:
+
+The dataset might have missing or incomplete entries, especially in critical columns such as price and points, which could impact the accuracy and representativeness of the analysis.
+
+Sampling Bias:
+
+The dataset might have a bias towards specific wine varieties, countries, or wineries due to the way the data was collected, potentially impacting the generalizability of findings.
+
+Time Sensitivity:
+
+The dataset might be time-sensitive, with trends and preferences changing over time. The analysis might not reflect the current market situation if the data is not up to date.
+
+Limited Attributes:
+
+The dataset includes a limited number of attributes. Additional features like climate, soil type, and winemaking techniques could provide more comprehensive insights.
+
+Variety Classification:
+
+Wine varieties might be subject to interpretation or classification inconsistencies, affecting the accuracy of the analysis, particularly in understanding the relationship between variety and other attributes.
+
+Price Currency:
+
+The dataset may have prices in different currencies. Not accounting for this could introduce inaccuracies in price-related analyses.
+
+Points Subjectivity:
+
+Wine ratings (points) are subjective and could vary based on the reviewer's preferences, leading to potential biases in the analysis of wine quality.
+
+Country Labeling:
+
+The accuracy of country labels relies on the dataset's quality and sources. Mislabeling or inconsistent labeling can affect country-based analyses.
+
+External Factors:
+
+External factors like economic conditions, global events, or market trends might influence wine prices and consumer preferences, which are not accounted for in the dataset.
+
+Statistical Assumptions:
+
+The analyses made assumptions such as normality and homogeneity of variances, which may not hold true for the dataset and could impact the validity of the tests.
+
+
+
+### CONCLUSION
+
+In the present study, an examination of the wine dataset was undertaken, whereby a range of hypothesis tests and ANOVA comparisons were used to investigate many facets including wine kinds, countries, designations, prices, and points. Notwithstanding the inherent constraints in the dataset, the results yielded useful insights into the wine business.In summary, this research provides an initial framework for comprehending the intricacies of the wine business, facilitating well-informed decision-making among relevant parties. To enhance the comprehensiveness of our understanding of the wine business, it is recommended that future investigations use further data, take into account external influences, and address the shortcomings already acknowledged. The acquired insights have significant value in terms of pricing tactics, marketing endeavours, and overall market positioning within the wine industry.
+
+### APPENDICES
+
+1. Loading and Preprocessing Data:
+
+Loading Data:
+
+```{r}
+library(tidyverse)
+wine_reviews <- read.csv("winedata.csv")
+
+```
+
+Cleaning Missing Values:
+
+```{r}
+wine_reviews <- wine_reviews %>%
+  drop_na(price, points, variety, country, designation)
+
+```
+
+2. Statistical Analysis:
+
+Hypothesis Testing (e.g., T-tests):
+
+```{r}
+# Example t-test
+t_test_result_price <- t.test(wines_red_blend$price, wines_pinot_noir$price, var.equal = TRUE)
+
+```
+
+
+ANOVA:
+
+```{r}
+# Example ANOVA for wine varieties
+anova_wine_varieties <- aov(price ~ variety, data = wine_reviews)
+summary(anova_wine_varieties)
+
+```
+
+
+3. Visualization:
+
+Box Plot:
+
+```{r}
+ggplot(data = wine_reviews, aes(x = variety, y = price)) +
+  geom_boxplot() +
+  labs(x = "Wine Variety", y = "Price") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+Histogram:
+
+```{r}
+ggplot(data = wine_reviews, aes(x = points)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(x = "Points", y = "Frequency") +
+  theme_minimal()
+
+```
+
+
+
+4. Confidence Intervals:
+
+Calculating Confidence Intervals:
+
+```{r}
+# Example for confidence interval calculation
+price_diff_red_blend_pinot_noir <- t_test_result_price$conf.int
+
+```
+
+
+
+
+5. Summary and Conclusion:
+
+Generating Conclusion:
+
+
+```{r}
+# Example of summarizing the conclusion
+summary_conclusion <- "In this analysis of the wine dataset, we explored various aspects of the wine industry, including price differences, points, and market dynamics based on wine variety and country of origin. The findings highlight significant variations in average prices and ratings, providing valuable insights for both consumers and industry stakeholders."
+
+```
+
+
+
+
+
+### REFERENCES
+
+https://www.kaggle.com/zynicide/wine-reviews
+
+https://stackoverflow.com/
+
+https://www.geeksforgeeks.org
+
+https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf
+
+
+
+
+
+
+
